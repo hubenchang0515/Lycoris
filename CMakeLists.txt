@@ -17,6 +17,12 @@ set_target_properties(${PROJECT_NAME}
                         "${HEADERS}"
 )
 
+# 设置编译选项
+set_target_properties(${PROJECT_NAME} 
+                        PROPERTIES
+                        COMPILE_FLAGS
+                        "-std=c++11 -O3 -W -Wall -Wextra")
+
 # 安装
 install(TARGETS
         ${PROJECT_NAME}

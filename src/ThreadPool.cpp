@@ -1,5 +1,8 @@
 #include "ThreadPool.h"
 
+namespace Lycoris
+{
+
 ThreadPool::ThreadPool() noexcept:
     m_threadNum{std::thread::hardware_concurrency()},
     m_taskNum{0}
@@ -132,7 +135,6 @@ void ThreadPool::_taskNumSub() noexcept
     m_taskNumNotifier.notify_all();
 }
 
-// static 
 void ThreadPool::_threadHandler() noexcept
 {
     std::function<void(void)> func;
@@ -149,3 +151,5 @@ void ThreadPool::_threadHandler() noexcept
         }
     }
 }
+
+}; // namespace Lycoris

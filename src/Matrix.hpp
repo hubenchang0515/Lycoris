@@ -1,5 +1,5 @@
-#ifndef MATRIX_HPP
-#define MATRIX_HPP
+#ifndef LYCORIS_MATRIX_HPP
+#define LYCORIS_MATRIX_HPP
 
 #include <iostream>
 #include <cstddef>
@@ -8,8 +8,11 @@
 #include <string>
 #include <vector>
 
+namespace Lycoris
+{
+
 template<typename... T>
-static std::string makeString(const char* fmt, T... args) noexcept
+static std::string __strfmt__(const char* fmt, T... args) noexcept
 {
     static char buffer[1024];
     sprintf(buffer, fmt, args...);
@@ -84,7 +87,9 @@ Matrix<T> operator- (const Matrix<T>& left, const Matrix<T>& right);
 template<typename T>
 Matrix<T> operator* (const Matrix<T>& left, const Matrix<T>& right);
 template<typename T>
-Matrix<T> dotX(const Matrix<T>& left, const Matrix<T>& right);
+Matrix<T> scalarMul(const Matrix<T>& left, const Matrix<T>& right);
+template<typename T>
+Matrix<T> scalarDiv(const Matrix<T>& left, const Matrix<T>& right);
 
 
 template<typename T>
@@ -130,7 +135,8 @@ public:
     friend Matrix<T> operator+<T> (const Matrix<T>& left, const Matrix<T>& right);
     friend Matrix<T> operator-<T> (const Matrix<T>& left, const Matrix<T>& right);
     friend Matrix<T> operator*<T> (const Matrix<T>& left, const Matrix<T>& right);  // 叉乘
-    friend Matrix<T> dotX<T>(const Matrix<T>& left, const Matrix<T>& right);        // 点乘
+    friend Matrix<T> scalarMul<T> (const Matrix<T>& left, const Matrix<T>& right);  // 数乘
+    friend Matrix<T> scalarDiv<T> (const Matrix<T>& left, const Matrix<T>& right);
 
 public:
     ~Matrix() noexcept
@@ -251,7 +257,7 @@ public:
     void reshape(size_t width, size_t height=1)
     {
         if (width * height != m_width * m_height)
-            throw std::range_error{makeString("reshape %zu * %zu != %zu * %zu", 
+            throw std::range_error{__strfmt__("reshape %zu * %zu != %zu * %zu", 
                                                 width, height, m_width, m_height)};
 
         m_width = width;
@@ -283,7 +289,18 @@ public:
         }
     }
 
-    T reduce(std::function<T(const T& x, const T& y)> func) noexcept
+    void map(std::function<void(const T& e)> func) const noexcept
+    {
+        for (size_t row = 0; row < m_height; row++)
+        {
+            for (size_t col = 0; col < m_width; col++)
+            {
+                func(m_data[row * m_width + col]);
+            }
+        }
+    }
+
+    T reduce(std::function<T(const T& x, const T& y)> func) const noexcept
     {
         T value = func(m_data[0], m_data[1]);
         for (size_t i = 2; i < m_width*m_height; i++)
@@ -331,7 +348,7 @@ public:
     T item(size_t i=0) const
     {
         if (i >= m_width * m_height)
-            throw std::out_of_range{makeString("item index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("item index %zu is out of height %zu", 
                                                 i, m_width * m_height)};
         return m_data[i];
     }
@@ -339,7 +356,7 @@ public:
     RowView row(size_t r=0)
     {
         if (r >= m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 r, m_height)};
 
         return RowView(*this, r);
@@ -348,7 +365,7 @@ public:
     const RowView row(size_t r=0) const
     {
         if (r >= m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 r, m_height)};
 
         return RowView(*this, r);
@@ -357,7 +374,7 @@ public:
     ColView col(size_t c=0)
     {
         if (c >= m_width)
-            throw std::out_of_range{makeString("col index %zu is out of range %zu",
+            throw std::out_of_range{__strfmt__("col index %zu is out of range %zu",
                                                 c, m_width)};
 
         return ColView(*this, c);
@@ -366,7 +383,7 @@ public:
     const ColView col(size_t c=0) const
     {
         if (c >= m_width)
-            throw std::out_of_range{makeString("col index %zu is out of range %zu",
+            throw std::out_of_range{__strfmt__("col index %zu is out of range %zu",
                                                 c, m_width)};
 
         return ColView(*this, c);
@@ -375,7 +392,7 @@ public:
     RowView operator[] (size_t row)
     {
         if (row >= m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 row, m_height)};
 
         return RowView(*this, row);
@@ -384,7 +401,7 @@ public:
     const RowView operator[] (size_t row) const
     {
         if (row >= m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 row, m_height)};
 
         return RowView(*this, row);
@@ -450,7 +467,7 @@ public:
     Matrix<T>& operator += (const RowView& vec)
     {
         if (m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             m_width, vec.size())};
 
         for (size_t row = 0; row < m_height; row++)
@@ -468,7 +485,7 @@ public:
     Matrix<T>& operator -= (const RowView& vec)
     {
         if (m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             m_width, vec.size())};
 
         for (size_t row = 0; row < m_height; row++)
@@ -486,7 +503,7 @@ public:
     Matrix<T>& operator *= (const RowView& vec)
     {
         if (m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             m_width, vec.size())};
 
         for (size_t row = 0; row < m_height; row++)
@@ -504,7 +521,7 @@ public:
     Matrix<T>& operator /= (const RowView& vec)
     {
         if (m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             m_width, vec.size())};
 
         for (size_t row = 0; row < m_height; row++)
@@ -522,7 +539,7 @@ public:
     Matrix<T> operator += (const ColView& vec)
     {
         if (m_height != vec.size())
-            throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+            throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                                 m_height, vec.size())};
 
         for (size_t y = 0; y < m_height; y++)
@@ -540,7 +557,7 @@ public:
     Matrix<T> operator -= (const ColView& vec)
     {
         if (m_height != vec.size())
-            throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+            throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                                 m_height, vec.size())};
 
         for (size_t y = 0; y < m_height; y++)
@@ -558,7 +575,7 @@ public:
     Matrix<T> operator *= (const ColView& vec)
     {
         if (m_height != vec.size())
-            throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+            throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                                 m_height, vec.size())};
 
         for (size_t y = 0; y < m_height; y++)
@@ -576,7 +593,7 @@ public:
     Matrix<T> operator /= (const ColView& vec)
     {
         if (m_height != vec.size())
-            throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+            throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                                 m_height, vec.size())};
 
         for (size_t y = 0; y < m_height; y++)
@@ -594,11 +611,11 @@ public:
     Matrix<T>& operator += (const Matrix<T>& right)
     {
         if (m_width != right.m_width)
-            throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+            throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                                 m_width, right.m_width)};
     
         if (m_height != right.m_height)
-            throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+            throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                                 m_height, right.m_height)};
 
         for (size_t row = 0; row < m_height; row++)
@@ -616,11 +633,11 @@ public:
     Matrix<T>& operator -= (const Matrix<T>& right)
     {
         if (m_width != right.m_width)
-            throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+            throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                                 m_width, right.m_width)};
     
         if (m_height != right.m_height)
-            throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+            throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                                 m_height, right.m_height)};
 
         for (size_t row = 0; row < m_height; row++)
@@ -634,15 +651,15 @@ public:
         return *this;
     }
 
-    // 点乘矩阵
-    Matrix<T>& dotX(const Matrix<T>& right)
+    // 数乘矩阵
+    Matrix<T>& scalarMul(const Matrix<T>& right)
     {
         if (m_width != right.m_width)
-            throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+            throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                                 m_width, right.m_width)};
     
         if (m_height != right.m_height)
-            throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+            throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                                 m_height, right.m_height)};
 
         for (size_t row = 0; row < m_height; row++)
@@ -650,6 +667,28 @@ public:
             for (size_t col = 0; col < m_width; col++)
             {
                 (*this)[row][col] = (*this)[row][col] * right[row][col];
+            }
+        }
+
+        return *this;
+    }
+
+    // 数乘矩阵
+    Matrix<T>& scalarDiv(const Matrix<T>& right)
+    {
+        if (m_width != right.m_width)
+            throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
+                                                m_width, right.m_width)};
+    
+        if (m_height != right.m_height)
+            throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
+                                                m_height, right.m_height)};
+
+        for (size_t row = 0; row < m_height; row++)
+        {
+            for (size_t col = 0; col < m_width; col++)
+            {
+                (*this)[row][col] = (*this)[row][col] / right[row][col];
             }
         }
 
@@ -682,7 +721,7 @@ public:
     T& operator[] (size_t i)
     {
         if (i >= m_matrix.m_width)
-            throw std::out_of_range{makeString("col index %zu is out of width %zu", 
+            throw std::out_of_range{__strfmt__("col index %zu is out of width %zu", 
                                                 i, m_matrix.m_width)};
 
         return m_matrix.m_data[m_row * m_matrix.m_width + i];
@@ -691,7 +730,7 @@ public:
     const T& operator[] (size_t i) const
     {
         if (i >= m_matrix.m_width)
-            throw std::out_of_range{makeString("col index %zu is out of width %zu", 
+            throw std::out_of_range{__strfmt__("col index %zu is out of width %zu", 
                                                 i, m_matrix.m_width)};
 
         return m_matrix.m_data[m_row * m_matrix.m_width + i];
@@ -721,7 +760,7 @@ public:
     T& operator[] (size_t i)
     {
         if (i >= m_matrix.m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 i, m_matrix.m_height)};
 
         return m_matrix.m_data[i * m_matrix.m_width + m_col];
@@ -730,7 +769,7 @@ public:
     const T& operator[] (size_t i) const
     {
         if (i >= m_matrix.m_height)
-            throw std::out_of_range{makeString("row index %zu is out of height %zu", 
+            throw std::out_of_range{__strfmt__("row index %zu is out of height %zu", 
                                                 i, m_matrix.m_height)};
 
         return m_matrix.m_data[i * m_matrix.m_width + m_col];
@@ -870,7 +909,7 @@ template<typename T>
 Matrix<T> operator+ (const Matrix<T>& mat, const typename Matrix<T>::RowView& vec)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -895,7 +934,7 @@ template<typename T>
 Matrix<T> operator* (const Matrix<T>& mat, const typename Matrix<T>::RowView& vec)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -920,7 +959,7 @@ template<typename T>
 Matrix<T> operator- (const Matrix<T>& mat, const typename Matrix<T>::RowView& vec)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -939,7 +978,7 @@ template<typename T>
 Matrix<T> operator- (const typename Matrix<T>::RowView& vec, const Matrix<T>& mat)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -958,7 +997,7 @@ template<typename T>
 Matrix<T> operator/ (const Matrix<T>& mat, const typename Matrix<T>::RowView& vec)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -977,7 +1016,7 @@ template<typename T>
 Matrix<T> operator/ (const typename Matrix<T>::RowView& vec, const Matrix<T>& mat)
 {
     if (mat.m_width != vec.size())
-        throw std::range_error{makeString("matrix width %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix width %zu not equal to row width %zu",
                                             mat.m_width, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -996,7 +1035,7 @@ template<typename T>
 Matrix<T> operator+ (const Matrix<T>& mat, const typename Matrix<T>::ColView& vec)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1021,7 +1060,7 @@ template<typename T>
 Matrix<T> operator* (const Matrix<T>& mat, const typename Matrix<T>::ColView& vec)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1046,7 +1085,7 @@ template<typename T>
 Matrix<T> operator- (const Matrix<T>& mat, const typename Matrix<T>::ColView& vec)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1065,7 +1104,7 @@ template<typename T>
 Matrix<T> operator- (const typename Matrix<T>::ColView& vec, const Matrix<T>& mat)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1084,7 +1123,7 @@ template<typename T>
 Matrix<T> operator/ (const Matrix<T>& mat, const typename Matrix<T>::ColView& vec)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1103,7 +1142,7 @@ template<typename T>
 Matrix<T> operator/ (const typename Matrix<T>::ColView& vec, const Matrix<T>& mat)
 {
     if (mat.m_height != vec.size())
-        throw std::range_error{makeString("matrix height %zu not equal to row width %zu",
+        throw std::range_error{__strfmt__("matrix height %zu not equal to row width %zu",
                                             mat.m_height, vec.size())};
 
     Matrix<T> result{mat.m_width, mat.m_height};
@@ -1122,11 +1161,11 @@ template<typename T>
 Matrix<T> operator+ (const Matrix<T>& left, const Matrix<T>& right)
 {
     if (left.m_width != right.m_width)
-        throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+        throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                             left.m_width, right.m_width)};
     
     if (left.m_height != right.m_height)
-        throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+        throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                             left.m_height, right.m_height)};
 
     Matrix<T> result{left.m_width, left.m_height};
@@ -1145,11 +1184,11 @@ template<typename T>
 Matrix<T> operator- (const Matrix<T>& left, const Matrix<T>& right)
 {
     if (left.m_width != right.m_width)
-        throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+        throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                             left.m_width, right.m_width)};
     
     if (left.m_height != right.m_height)
-        throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+        throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                             left.m_height, right.m_height)};
 
     Matrix<T> result{left.m_width, left.m_height};
@@ -1168,7 +1207,7 @@ template<typename T>
 Matrix<T> operator* (const Matrix<T>& left, const Matrix<T>& right)
 {
     if (left.m_width != right.m_height)
-        throw std::range_error{makeString("left matrix width %zu not equal to right matrix height %zu", 
+        throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix height %zu", 
                                             left.m_width, right.m_height)};
 
     auto transpose = right.transpose();
@@ -1188,14 +1227,14 @@ Matrix<T> operator* (const Matrix<T>& left, const Matrix<T>& right)
 }
 
 template<typename T>
-Matrix<T> dotX(const Matrix<T>& left, const Matrix<T>& right)
+Matrix<T> scalarMul(const Matrix<T>& left, const Matrix<T>& right)
 {
     if (left.m_width != right.m_width)
-        throw std::range_error{makeString("left matrix width %zu not equal to right matrix width %zu", 
+        throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
                                             left.m_width, right.m_width)};
     
     if (left.m_height != right.m_height)
-        throw std::range_error{makeString("left matrix height %zu not equal to right matrix height %zu", 
+        throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
                                             left.m_height, right.m_height)};
 
     Matrix<T> result{left.m_width, left.m_height};
@@ -1210,5 +1249,29 @@ Matrix<T> dotX(const Matrix<T>& left, const Matrix<T>& right)
     return result;
 }
 
+template<typename T>
+Matrix<T> scalarDiv(const Matrix<T>& left, const Matrix<T>& right)
+{
+    if (left.m_width != right.m_width)
+        throw std::range_error{__strfmt__("left matrix width %zu not equal to right matrix width %zu", 
+                                            left.m_width, right.m_width)};
+    
+    if (left.m_height != right.m_height)
+        throw std::range_error{__strfmt__("left matrix height %zu not equal to right matrix height %zu", 
+                                            left.m_height, right.m_height)};
 
-#endif
+    Matrix<T> result{left.m_width, left.m_height};
+    for (size_t row = 0; row < result.m_height; row++)
+    {
+        for (size_t col = 0; col < result.m_width; col++)
+        {
+            result[row][col] = left[row][col] / right[row][col];
+        }
+    }
+
+    return result;
+}
+
+}; // namespace Lycoris
+
+#endif // LYCORIS_MATRIX_HPP

@@ -1,5 +1,5 @@
-#ifndef THREAD_POOL_H
-#define THREAD_POOL_H
+#ifndef LYCORIS_THREAD_POOL_H
+#define LYCORIS_THREAD_POOL_H
 
 #include <cstddef>
 #include <vector>
@@ -9,6 +9,8 @@
 #include <functional>
 #include <queue>
 
+namespace Lycoris
+{
 
 class ThreadPool
 {
@@ -61,5 +63,6 @@ private:
     void _threadHandler() noexcept;
 };
 
+}; // namespace Lycoris
 
-#endif
+#endif // LYCORIS_THREAD_POOL_H
