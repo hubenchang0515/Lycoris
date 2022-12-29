@@ -102,14 +102,14 @@ public:
     friend std::ostream& operator<< <T> (std::ostream& stream, const Matrix<T>& mat);
 
     // 标量运算
-    friend Matrix<T> operator+<T> (const T& n, const Matrix<T>& mat);
-    friend Matrix<T> operator+<T> (const Matrix<T>& mat, const T& n);
-    friend Matrix<T> operator-<T> (const T& n, const Matrix<T>& mat);
-    friend Matrix<T> operator-<T> (const Matrix<T>& mat, const T& n);
-    friend Matrix<T> operator*<T> (const T& n, const Matrix<T>& mat);
-    friend Matrix<T> operator*<T> (const Matrix<T>& mat, const T& n);
-    friend Matrix<T> operator/<T> ( const T& n, const Matrix<T>& mat);
-    friend Matrix<T> operator/<T> (const Matrix<T>& mat, const T& n);
+    friend Matrix<T> operator+<T> (const T& n, const Matrix<T>& mat) noexcept;
+    friend Matrix<T> operator+<T> (const Matrix<T>& mat, const T& n) noexcept;
+    friend Matrix<T> operator-<T> (const T& n, const Matrix<T>& mat) noexcept;
+    friend Matrix<T> operator-<T> (const Matrix<T>& mat, const T& n) noexcept;
+    friend Matrix<T> operator*<T> (const T& n, const Matrix<T>& mat) noexcept;
+    friend Matrix<T> operator*<T> (const Matrix<T>& mat, const T& n) noexcept;
+    friend Matrix<T> operator/<T> (const T& n, const Matrix<T>& mat) noexcept;
+    friend Matrix<T> operator/<T> (const Matrix<T>& mat, const T& n) noexcept;
 
     // 行向量运算
     friend Matrix<T> operator+<T> (const Matrix<T>& mat, const RowView& vec);
@@ -176,7 +176,16 @@ public:
 
     }
 
-    Matrix(size_t width, size_t height, const T& value=T()):
+    Matrix(size_t width, size_t height):
+        m_width{width},
+        m_height{height}
+    {
+        m_data = new T[width * height];
+        if (m_data == nullptr)
+            throw std::bad_alloc{};
+    }
+
+    Matrix(size_t width, size_t height, const T& value):
         m_width{width},
         m_height{height}
     {
@@ -1211,7 +1220,7 @@ Matrix<T> operator* (const Matrix<T>& left, const Matrix<T>& right)
                                             left.m_width, right.m_height)};
 
     auto transpose = right.transpose();
-    Matrix<T> result{right.m_width, left.m_height};
+    Matrix<T> result{right.m_width, left.m_height, T{}};
     for (size_t row = 0; row < result.m_height; row++)
     {
         for (size_t col = 0; col < result.m_width; col++)
